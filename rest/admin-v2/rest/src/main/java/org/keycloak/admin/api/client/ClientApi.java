@@ -2,11 +2,13 @@ package org.keycloak.admin.api.client;
 
 import jakarta.validation.Valid;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PATCH;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
 
 import org.keycloak.representations.admin.v2.ClientRepresentation;
 
@@ -21,14 +23,21 @@ public interface ClientApi {
     @Produces(MediaType.APPLICATION_JSON)
     ClientRepresentation getClient();
 
+    /**
+     * @return {@link ClientRepresentation} of created/updated client
+     */
     @PUT
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    ClientRepresentation createOrUpdateClient(@Valid ClientRepresentation client);
+    Response createOrUpdateClient(@Valid ClientRepresentation client);
 
     @PATCH
-    @Consumes({MediaType.APPLICATION_JSON_PATCH_JSON, CONTENT_TYPE_MERGE_PATCH})
+    @Consumes(CONTENT_TYPE_MERGE_PATCH)
     @Produces(MediaType.APPLICATION_JSON)
     ClientRepresentation patchClient(JsonNode patch);
+
+    @DELETE
+    @Produces(MediaType.APPLICATION_JSON)
+    void deleteClient();
 
 }

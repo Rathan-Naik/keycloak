@@ -63,7 +63,9 @@ import org.keycloak.testframework.remote.runonserver.InjectRunOnServer;
 import org.keycloak.testframework.remote.runonserver.RunOnServerClient;
 import org.keycloak.testframework.server.KeycloakUrls;
 import org.keycloak.testframework.ui.annotations.InjectWebDriver;
-import org.keycloak.tests.utils.admin.ApiUtil;
+import org.keycloak.testframework.ui.webdriver.ManagedWebDriver;
+import org.keycloak.testframework.util.ApiUtil;
+import org.keycloak.tests.utils.admin.AdminApiUtil;
 import org.keycloak.testsuite.util.oauth.AccessTokenResponse;
 import org.keycloak.testsuite.util.oauth.AuthorizationEndpointResponse;
 import org.keycloak.util.JsonSerialization;
@@ -85,7 +87,6 @@ import org.jboss.logging.Logger;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.openqa.selenium.WebDriver;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 
@@ -114,7 +115,7 @@ public class ConcurrentLoginTest extends AbstractConcurrencyTest {
     OAuthClient oauth;
 
     @InjectWebDriver
-    WebDriver driver;
+    ManagedWebDriver driver;
 
     @InjectKeycloakUrls
     KeycloakUrls keycloakUrls;
@@ -188,7 +189,7 @@ public class ConcurrentLoginTest extends AbstractConcurrencyTest {
             rep.setTemporary(Boolean.FALSE);
             rep.setValue("password");
             rep.setType(CredentialRepresentation.PASSWORD);
-            ApiUtil.findUserByUsernameId(managedRealm.admin(), user1.getUsername()).resetPassword(rep);
+            AdminApiUtil.findUserByUsernameId(managedRealm.admin(), user1.getUsername()).resetPassword(rep);
         } finally {
             realmRep.setPasswordPolicy("");
             managedRealm.admin().update(realmRep);
@@ -297,7 +298,7 @@ public class ConcurrentLoginTest extends AbstractConcurrencyTest {
             run(DEFAULT_THREADS, DEFAULT_THREADS, codeToTokenTask);
 
             // Logout user
-            ApiUtil.findUserByUsernameId(managedRealm.admin(), user1.getUsername()).logout();
+            AdminApiUtil.findUserByUsernameId(managedRealm.admin(), user1.getUsername()).logout();
 
             // Code should be successfully exchanged for the token at max once. In some cases (EG. Cross-DC) it may not be even successfully exchanged
             assertThat(codeToTokenSuccessCount.get(), Matchers.equalTo(1));

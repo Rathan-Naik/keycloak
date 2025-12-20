@@ -17,9 +17,10 @@
 package org.keycloak.broker.provider;
 import java.util.List;
 
+import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.protocol.oidc.JWTAuthorizationGrantValidationContext;
 
-public interface JWTAuthorizationGrantProvider {
+public interface JWTAuthorizationGrantProvider <C extends IdentityProviderModel> extends IdentityProvider<C> {
 
     BrokeredIdentityContext validateAuthorizationGrantAssertion(JWTAuthorizationGrantValidationContext assertion) throws IdentityBrokerException;
 
@@ -35,4 +36,6 @@ public interface JWTAuthorizationGrantProvider {
     int getMaxAllowedExpiration();
 
     String getAssertionSignatureAlg();
+
+    boolean isLimitAccessTokenExpiration();
 }

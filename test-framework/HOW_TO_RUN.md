@@ -101,9 +101,10 @@ Valid values:
 
 Configuration:
 
-| Value                                             | Description                                                            |
-|---------------------------------------------------|------------------------------------------------------------------------|
-| `kc.test.server.config` / `KC_TEST_SERVER_CONFIG` | The name of a KeycloakServerConfig class to use when running the tests |
+| Value                                             | Description                                                                            |
+|---------------------------------------------------|----------------------------------------------------------------------------------------|
+| `kc.test.server.config` / `KC_TEST_SERVER_CONFIG` | The name of a KeycloakServerConfig class to use when running the tests                 |
+| `kc.test.server.kcw` / `KC_TEST_SERVER_KCW`       | Set to a kcw command to use kcw with remote server (see `kcw help` for valid commands) |
 
 
 ### Database
@@ -172,6 +173,16 @@ Valid values:
 | chrome-headless  | Chrome WebDriver without UI  |
 | firefox          | Firefox WebDriver            |
 | firefox-headless | Firefox WebDriver without UI |
+
+Resolving the web driver is done either automatically by Selenium, or the binary can be specified directly either
+through using `CHROMEWEBDRIVER` and `GECKOWEBDRIVER` environment variables (these environment variables are already
+configured on GitHub Actions), or it can be configured using standard test framework configuration options. 
+
+Configuration:
+
+| Value                                               | Description        |
+|-----------------------------------------------------|--------------------|
+| `kc.test.browser.driver` / `KC_TEST_BROWSER_DRIVER` | Path to the driver |
 
 ### Supplier configuration
 

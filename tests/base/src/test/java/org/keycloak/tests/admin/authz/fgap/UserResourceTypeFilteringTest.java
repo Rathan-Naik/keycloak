@@ -165,7 +165,7 @@ public class UserResourceTypeFilteringTest extends AbstractPermissionTest {
             String adminUserId = realm.admin().users().search("myadmin").get(0).getId();
             String groupId = ApiUtil.getCreatedId(response);
             realm.admin().users().get(adminUserId).joinGroup(groupId);
-            GroupPolicyRepresentation policy = createGroupPolicy(realm, client, "Admin Group Policy", groupId, Logic.POSITIVE);
+            GroupPolicyRepresentation policy = createGroupPolicy(realm, client, "Admin Group Policy", Logic.POSITIVE, groupId);
             createPermission(client, "user-9", usersType, Set.of(VIEW), policy);
 
         }
@@ -216,7 +216,7 @@ public class UserResourceTypeFilteringTest extends AbstractPermissionTest {
         try (Response response = realm.admin().groups().add(rep)) {
             String groupId = ApiUtil.getCreatedId(response);
             realm.admin().users().get(adminUserId).joinGroup(groupId);
-            groupPolicy = createGroupPolicy(realm, client, "Admin Group Policy", groupId, Logic.POSITIVE);
+            groupPolicy = createGroupPolicy(realm, client, "Admin Group Policy", Logic.POSITIVE, groupId);
         }
 
         createPermission(client, "user-9", usersType, Set.of(VIEW), rolePolicy, groupPolicy);
@@ -434,7 +434,7 @@ public class UserResourceTypeFilteringTest extends AbstractPermissionTest {
 
         // create users
         for (int i = 0; i < 4; i++) {
-            String userId = ApiUtil.handleCreatedResponse(realm.admin().users().create(UserConfigBuilder.create()
+            String userId = ApiUtil.getCreatedId(realm.admin().users().create(UserConfigBuilder.create()
                     .username("user" + i)
                     .password("password")
                     .firstName("user")
@@ -503,7 +503,7 @@ public class UserResourceTypeFilteringTest extends AbstractPermissionTest {
 
         // assign role to users
         for (String username : List.of("user_x", "user_y", "user_z")) {
-            String userId = ApiUtil.handleCreatedResponse(realm.admin().users().create(UserConfigBuilder.create()
+            String userId = ApiUtil.getCreatedId(realm.admin().users().create(UserConfigBuilder.create()
                     .username(username)
                     .password("password")
                     .firstName("user")
@@ -511,7 +511,7 @@ public class UserResourceTypeFilteringTest extends AbstractPermissionTest {
                     .email(username + "@test")
                     .build()));
             realm.admin().users().get(userId).roles().clientLevel(testClient.getId()).add(List.of(role));
-            realm.cleanup().add(r -> r.users().delete(userId));
+            realm.cleanup().add(r -> r.users().delete(userId).close());
         }
 
         // Grant myadmin permission to view user_x and user_y, and to view the test client

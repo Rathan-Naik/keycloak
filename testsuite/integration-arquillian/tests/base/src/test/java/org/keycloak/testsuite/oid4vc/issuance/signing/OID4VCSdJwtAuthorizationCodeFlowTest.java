@@ -19,6 +19,8 @@ package org.keycloak.testsuite.oid4vc.issuance.signing;
 
 import org.keycloak.representations.idm.ClientScopeRepresentation;
 
+import static org.keycloak.OID4VCConstants.SDJWT_DELIMITER;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -47,6 +49,11 @@ public class OID4VCSdJwtAuthorizationCodeFlowTest extends OID4VCAuthorizationCod
     }
 
     @Override
+    protected String getFirstNameProtocolMapperName() {
+        return "firstName-mapper";
+    }
+
+    @Override
     protected void verifyCredentialStructure(Object credentialObj) {
         assertNotNull("Credential object should not be null", credentialObj);
 
@@ -57,6 +64,6 @@ public class OID4VCSdJwtAuthorizationCodeFlowTest extends OID4VCAuthorizationCod
 
         // Verify it looks like an SD-JWT (contains dots and ~)
         assertTrue("SD-JWT should contain dots", sdJwtString.contains("."));
-        assertTrue("SD-JWT should contain tilde", sdJwtString.contains("~"));
+        assertTrue("SD-JWT should contain tilde", sdJwtString.contains(SDJWT_DELIMITER));
     }
 }

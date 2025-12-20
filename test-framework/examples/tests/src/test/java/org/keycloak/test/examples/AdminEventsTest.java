@@ -47,7 +47,7 @@ public class AdminEventsTest {
         userRep.setUsername(userName);
         userRep.setEnabled(true);
 
-        String userId = ApiUtil.handleCreatedResponse(adminClient.realm(realm.getName()).users().create(userRep));
+        String userId = ApiUtil.getCreatedId(adminClient.realm(realm.getName()).users().create(userRep));
 
         AdminEventAssertion.assertSuccess(adminEvents.poll())
                 .operationType(OperationType.CREATE)
@@ -57,11 +57,15 @@ public class AdminEventsTest {
 
         adminClient.realm(realm.getName()).users().delete(userId);
 
+        UserRepresentation extectedRep = new UserRepresentation();
+        extectedRep.setId(userRep.getId());
+        extectedRep.setUsername(userName);
+
         AdminEventAssertion.assertSuccess(adminEvents.poll())
                 .operationType(OperationType.DELETE)
                 .resourceType(ResourceType.USER)
                 .resourcePath("users", userId)
-                .representation(null);
+                .representation(extectedRep);
     }
 
     @Test
@@ -115,7 +119,7 @@ public class AdminEventsTest {
     private List<String> createUsers(String prefix, int n) {
         List<String> userIds = new LinkedList<>();
         for (int i = 0; i < n; i++) {
-            String userId = ApiUtil.handleCreatedResponse(realm.admin().users().create(UserConfigBuilder.create().username(prefix + i).build()));
+            String userId = ApiUtil.getCreatedId(realm.admin().users().create(UserConfigBuilder.create().username(prefix + i).build()));
             userIds.add(userId);
         }
         return userIds;

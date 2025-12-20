@@ -67,7 +67,7 @@ import org.keycloak.util.TokenUtil;
 
 import org.jboss.logging.Logger;
 
-import static org.keycloak.OAuth2Constants.AUTHORIZATION_DETAILS_PARAM;
+import static org.keycloak.OAuth2Constants.AUTHORIZATION_DETAILS;
 
 /**
  * Base class for OAuth 2.0 grant types
@@ -111,13 +111,12 @@ public abstract class OAuth2GrantTypeBase implements OAuth2GrantType {
         this.tokenManager = (TokenManager) context.tokenManager;
     }
 
-    protected Response createTokenResponse(UserModel user, UserSessionModel userSession, ClientSessionContext clientSessionCtx,
-        String scopeParam, boolean code, Function<TokenManager.AccessTokenResponseBuilder, ClientPolicyContext> clientPolicyContextGenerator) {
+    protected TokenManager.AccessTokenResponseBuilder createTokenResponseBuilder(UserModel user, UserSessionModel userSession, ClientSessionContext clientSessionCtx,  String scopeParam, Function<TokenManager.AccessTokenResponseBuilder, ClientPolicyContext> clientPolicyContextGenerator) {
         clientSessionCtx.setAttribute(Constants.GRANT_TYPE, context.getGrantType());
         AccessToken token = tokenManager.createClientAccessToken(session, realm, client, user, userSession, clientSessionCtx);
 
         TokenManager.AccessTokenResponseBuilder responseBuilder = tokenManager
-            .responseBuilder(realm, client, event, session, userSession, clientSessionCtx).accessToken(token);
+                .responseBuilder(realm, client, event, session, userSession, clientSessionCtx).accessToken(token);
         boolean useRefreshToken = useRefreshToken();
         if (useRefreshToken) {
             responseBuilder.generateRefreshToken();
@@ -153,6 +152,10 @@ public abstract class OAuth2GrantTypeBase implements OAuth2GrantType {
             }
         }
 
+        return responseBuilder;
+    }
+
+    protected Response createTokenResponse(TokenManager.AccessTokenResponseBuilder responseBuilder, ClientSessionContext clientSessionCtx, boolean code) {
         AccessTokenResponse res = null;
         if (code) {
             try {
@@ -160,7 +163,7 @@ public abstract class OAuth2GrantTypeBase implements OAuth2GrantType {
             } catch (RuntimeException re) {
                 if ("can not get encryption KEK".equals(re.getMessage())) {
                     throw new CorsErrorResponseException(cors, OAuthErrorException.INVALID_REQUEST,
-                        "can not get encryption KEK", Response.Status.BAD_REQUEST);
+                            "can not get encryption KEK", Response.Status.BAD_REQUEST);
                 } else {
                     throw re;
                 }
@@ -175,6 +178,13 @@ public abstract class OAuth2GrantTypeBase implements OAuth2GrantType {
         event.success();
 
         return cors.add(Response.ok(res).type(MediaType.APPLICATION_JSON_TYPE));
+    }
+
+    protected Response createTokenResponse(UserModel user, UserSessionModel userSession, ClientSessionContext clientSessionCtx,
+                                           String scopeParam, boolean code, Function<TokenManager.AccessTokenResponseBuilder, ClientPolicyContext> clientPolicyContextGenerator) {
+        TokenManager.AccessTokenResponseBuilder responseBuilder = createTokenResponseBuilder(user, userSession,
+                clientSessionCtx, scopeParam, clientPolicyContextGenerator);
+        return createTokenResponse(responseBuilder, clientSessionCtx, code);
     }
 
     protected void checkAndBindMtlsHoKToken(TokenManager.AccessTokenResponseBuilder responseBuilder, boolean useRefreshToken) {
@@ -270,6 +280,22 @@ public abstract class OAuth2GrantTypeBase implements OAuth2GrantType {
     }
 
     /**
+     * Hook method called after authorization_details are processed and before the token response is created.
+     * This allows authorization details processors to perform post-processing actions (e.g., creating state objects).
+     * Processors can store information in session notes during processing, and this hook allows them to act on it.
+     * Default implementation does nothing.
+     *
+     * @param userSession                  the user session
+     * @param clientSessionCtx             the client session context
+     * @param authorizationDetailsResponse the processed authorization details response
+     */
+    protected void afterAuthorizationDetailsProcessed(UserSessionModel userSession, ClientSessionContext clientSessionCtx,
+                                                      List<AuthorizationDetailsResponse> authorizationDetailsResponse) {
+        // Default: do nothing
+        // Subclasses or processors can override/extend this to perform post-processing
+    }
+
+    /**
      * Processes the authorization_details parameter using provider discovery.
      * This method can be overridden by subclasses to customize the behavior.
      *
@@ -278,7 +304,7 @@ public abstract class OAuth2GrantTypeBase implements OAuth2GrantType {
      * @return the authorization details response if processing was successful, null otherwise
      */
     protected List<AuthorizationDetailsResponse> processAuthorizationDetails(UserSessionModel userSession, ClientSessionContext clientSessionCtx) {
-        String authorizationDetailsParam = formParams.getFirst(AUTHORIZATION_DETAILS_PARAM);
+        String authorizationDetailsParam = formParams.getFirst(AUTHORIZATION_DETAILS);
         if (authorizationDetailsParam != null) {
             try {
                 return session.getKeycloakSessionFactory()
@@ -312,7 +338,7 @@ public abstract class OAuth2GrantTypeBase implements OAuth2GrantType {
      */
     protected List<AuthorizationDetailsResponse> handleMissingAuthorizationDetails(UserSessionModel userSession, ClientSessionContext clientSessionCtx) {
         try {
-            return session.getKeycloakSessionFactory()
+            var result = session.getKeycloakSessionFactory()
                     .getProviderFactoriesStream(AuthorizationDetailsProcessor.class)
                     .sorted((f1, f2) -> f2.order() - f1.order())
                     .map(f -> session.getProvider(AuthorizationDetailsProcessor.class, f.getId()))
@@ -320,6 +346,7 @@ public abstract class OAuth2GrantTypeBase implements OAuth2GrantType {
                     .filter(authzDetailsResponse -> authzDetailsResponse != null)
                     .findFirst()
                     .orElse(null);
+            return result;
         } catch (RuntimeException e) {
             logger.warnf(e, "Error when handling missing authorization_details");
             return null;
@@ -337,7 +364,7 @@ public abstract class OAuth2GrantTypeBase implements OAuth2GrantType {
      */
     protected List<AuthorizationDetailsResponse> processStoredAuthorizationDetails(UserSessionModel userSession, ClientSessionContext clientSessionCtx) throws CorsErrorResponseException {
         // Check if authorization_details was stored during authorization request (e.g., from PAR)
-        String storedAuthDetails = clientSessionCtx.getClientSession().getNote(AUTHORIZATION_DETAILS_PARAM);
+        String storedAuthDetails = clientSessionCtx.getClientSession().getNote(AUTHORIZATION_DETAILS);
         if (storedAuthDetails != null) {
             logger.debugf("Found authorization_details in client session, processing it");
             try {

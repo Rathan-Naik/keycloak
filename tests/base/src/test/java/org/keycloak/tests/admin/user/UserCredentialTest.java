@@ -26,8 +26,8 @@ import org.keycloak.testframework.oauth.annotations.InjectOAuthClient;
 import org.keycloak.testframework.realm.ManagedUser;
 import org.keycloak.testframework.realm.UserConfig;
 import org.keycloak.testframework.realm.UserConfigBuilder;
+import org.keycloak.tests.utils.admin.AdminApiUtil;
 import org.keycloak.tests.utils.admin.AdminEventPaths;
-import org.keycloak.tests.utils.admin.ApiUtil;
 import org.keycloak.testsuite.util.AccountHelper;
 import org.keycloak.util.JsonSerialization;
 
@@ -78,7 +78,7 @@ public class UserCredentialTest extends AbstractUserTest {
         loginPage.fillLogin("user1", "paSSw0rd");
         loginPage.submit();
 
-        assertTrue(driver.getPageSource().contains("Happy days"));
+        assertTrue(driver.page().getPageSource().contains("Happy days"));
 
         AccountHelper.logout(managedRealm.admin(), "user1");
     }
@@ -113,7 +113,7 @@ public class UserCredentialTest extends AbstractUserTest {
         loginPage.assertCurrent();
         loginPage.fillLogin(userName, userPass);
         loginPage.submit();
-        assertTrue(driver.getPageSource().contains("Happy days"), "Test user should be successfully logged in.");
+        assertTrue(driver.page().getPageSource().contains("Happy days"), "Test user should be successfully logged in.");
         AccountHelper.logout(managedRealm.admin(), userName);
 
         Optional<CredentialRepresentation> passwordCredential =
@@ -218,7 +218,7 @@ public class UserCredentialTest extends AbstractUserTest {
                 .get();
 
         // Test that when admin operates on user "user2", he can't update, move or remove credentials of different user "user1"
-        UserResource user2 = ApiUtil.findUserByUsernameId(managedRealm.admin(), testUser.getUsername());
+        UserResource user2 = AdminApiUtil.findUserByUsernameId(managedRealm.admin(), testUser.getUsername());
         try {
             user2.setCredentialUserLabel(otpCredential.getId(), "new-label");
             Assertions.fail("Not expected to successfully update user label");

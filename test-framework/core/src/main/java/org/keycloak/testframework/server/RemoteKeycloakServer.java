@@ -5,19 +5,32 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 import javax.net.ssl.SSLException;
+
+import org.keycloak.it.utils.Maven;
+import org.keycloak.testframework.config.Config;
 
 import io.quarkus.maven.dependency.Dependency;
 
+import static java.lang.System.out;
+
 public class RemoteKeycloakServer implements KeycloakServer {
 
-    private boolean enableTls = false;
+    private boolean tlsEnabled = false;
+
+    private String kcwCommand;
 
     @Override
-    public void start(KeycloakServerConfigBuilder keycloakServerConfigBuilder) {
-        enableTls = keycloakServerConfigBuilder.tlsEnabled();
+    public void start(KeycloakServerConfigBuilder keycloakServerConfigBuilder, boolean tlsEnabled) {
+        this.tlsEnabled = tlsEnabled;
+        kcwCommand = Config.getValueTypeConfig(KeycloakServer.class, "kcw", null, String.class);
         if (!verifyRunningKeycloak()) {
-            printStartupInstructions(keycloakServerConfigBuilder);
+            if (kcwCommand != null) {
+                printStartupInstructionsKcw(keycloakServerConfigBuilder);
+            } else {
+                printStartupInstructionsManual(keycloakServerConfigBuilder);
+            }
             waitForStartup();
         }
     }
@@ -28,7 +41,7 @@ public class RemoteKeycloakServer implements KeycloakServer {
 
     @Override
     public String getBaseUrl() {
-        if (isTlsEnabled()) {
+        if (tlsEnabled) {
             return "https://localhost:8443";
         } else {
             return "http://localhost:8080";
@@ -37,48 +50,56 @@ public class RemoteKeycloakServer implements KeycloakServer {
 
     @Override
     public String getManagementBaseUrl() {
-        if (isTlsEnabled()) {
+        if (tlsEnabled) {
             return "https://localhost:9000";
         } else {
             return "http://localhost:9000";
         }
     }
 
-    @Override
-    public boolean isTlsEnabled() {
-        return enableTls;
+    private void printStartupInstructionsManual(KeycloakServerConfigBuilder config) {
+        out.println("Remote Keycloak server is not running on " + getBaseUrl() + ", please start Keycloak with:");
+        out.println();
+        out.println(String.join(" \\\n", config.toArgs()));
+        out.println();
+
+        Set<Dependency> dependencies = config.toDependencies();
+        if (!dependencies.isEmpty()) {
+            out.println("Requested providers:");
+            for (Dependency d : dependencies) {
+                out.println("* " + d.getGroupId() + ":" + d.getArtifactId());
+            }
+            out.println();
+        }
+
+        Set<Path> configFiles = config.toConfigFiles();
+        if (!configFiles.isEmpty()) {
+            out.println("Config files:");
+            for (Path c : configFiles) {
+                out.print("* " + c.toAbsolutePath());
+            }
+            out.println();
+        }
     }
 
-    private void printStartupInstructions(KeycloakServerConfigBuilder keycloakServerConfigBuilder) {
-        StringBuilder sb = new StringBuilder();
+    private void printStartupInstructionsKcw(KeycloakServerConfigBuilder config) {
+        out.println("Remote Keycloak server is not running on " + getBaseUrl() + ", please start Keycloak with:");
+        out.println();
 
-        sb.append("Remote Keycloak server is not running on ")
-                .append(getBaseUrl())
-                .append(", please start Keycloak with:\n\n");
-
-        sb.append(String.join(" \\\n", keycloakServerConfigBuilder.toArgs()));
-        sb.append("\n\n");
-
-        Set<Dependency> dependencies = keycloakServerConfigBuilder.toDependencies();
+        Set<Dependency> dependencies = config.toDependencies();
         if (!dependencies.isEmpty()) {
-            sb.append("Requested providers:\n");
-            for (Dependency d : dependencies) {
-                sb.append("- ");
-                sb.append(d.getGroupId());
-                sb.append(":");
-                sb.append(d.getArtifactId());
-                sb.append("\n");
-            }
+            String dependencyPaths = dependencies.stream().map(d -> Maven.resolveArtifact(d.getGroupId(), d.getArtifactId()).toString()).collect(Collectors.joining(","));
+            out.println("KCW_PROVIDERS=" + dependencyPaths + " \\");
         }
-        Set<Path> configFiles = keycloakServerConfigBuilder.toConfigFiles();
+
+        Set<Path> configFiles = config.toConfigFiles();
         if (!configFiles.isEmpty()) {
-            sb.append("Copy following config files to your conf directory:\n");
-            for (Path c : configFiles) {
-                sb.append(c.toAbsolutePath());
-                sb.append("\n");
-            }
+            String configPaths =  configFiles.stream().map(p -> p.toAbsolutePath().toString()).collect(Collectors.joining(","));
+            out.println("KCW_CONFIGS=" + configPaths + " \\");
         }
-        System.out.println(sb);
+
+        out.println("kcw " + kcwCommand + " " + String.join(" \\\n", config.toArgs()));
+        out.println();
     }
 
     private boolean verifyRunningKeycloak() {

@@ -27,14 +27,13 @@ public class KeycloakServerConfigBuilder {
 
     private final String command;
     private final Map<String, String> options = new HashMap<>();
-    private final Set<Profile.Feature> features = new HashSet<>();
-    private final Set<Profile.Feature> featuresDisabled = new HashSet<>();
+    private final Set<String> features = new HashSet<>();
+    private final Set<String> featuresDisabled = new HashSet<>();
     private final LogBuilder log = new LogBuilder();
     private final Set<Dependency> dependencies = new HashSet<>();
     private final Set<Path> configFiles = new HashSet<>();
     private CacheType cacheType = CacheType.LOCAL;
     private boolean externalInfinispan = false;
-    private boolean tlsEnabled = false;
 
     private KeycloakServerConfigBuilder(String command) {
         this.command = command;
@@ -79,12 +78,12 @@ public class KeycloakServerConfigBuilder {
     }
 
     public KeycloakServerConfigBuilder features(Profile.Feature... features) {
-        this.features.addAll(List.of(features));
+        this.features.addAll(toFeatureStrings(features));
         return this;
     }
 
     public KeycloakServerConfigBuilder featuresDisabled(Profile.Feature... features) {
-        this.featuresDisabled.addAll(List.of(features));
+        this.featuresDisabled.addAll(toFeatureStrings(features));
         return this;
     }
 
@@ -106,15 +105,6 @@ public class KeycloakServerConfigBuilder {
     public KeycloakServerConfigBuilder dependency(String groupId, String artifactId) {
         dependencies.add(new DependencyBuilder().setGroupId(groupId).setArtifactId(artifactId).build());
         return this;
-    }
-
-    public KeycloakServerConfigBuilder tlsEnabled(boolean enabled) {
-        tlsEnabled = enabled;
-        return this;
-    }
-
-    public boolean tlsEnabled() {
-        return tlsEnabled ;
     }
     
     public KeycloakServerConfigBuilder cacheConfigFile(String resourcePath) {
@@ -231,9 +221,12 @@ public class KeycloakServerConfigBuilder {
         for (Map.Entry<String, String> e : options.entrySet()) {
             args.add("--" + e.getKey() + "=" + e.getValue());
         }
-
-        features.forEach(f -> args.add("--feature-%s=v%s".formatted(f.getUnversionedKey(), f.getVersion())));
-        featuresDisabled.forEach(f -> args.add("--feature-%s=disabled".formatted(f.getUnversionedKey())));
+        if (!features.isEmpty()) {
+            args.add("--features=" + String.join(",", features));
+        }
+        if (!featuresDisabled.isEmpty()) {
+            args.add("--features-disabled=" + String.join(",", featuresDisabled));
+        }
 
         return args;
     }
@@ -244,6 +237,15 @@ public class KeycloakServerConfigBuilder {
 
     Set<Path> toConfigFiles() {
         return configFiles;
+    }
+
+    private Set<String> toFeatureStrings(Profile.Feature... features) {
+        return Arrays.stream(features).map(f -> {
+            if (f.getVersion() > 1 || Profile.getFeatureVersions(f.getKey()).size() > 1) {
+                return f.getVersionedKey();
+            }
+            return f.getUnversionedKey();
+        }).collect(Collectors.toSet());
     }
 
     public enum LogHandlers {

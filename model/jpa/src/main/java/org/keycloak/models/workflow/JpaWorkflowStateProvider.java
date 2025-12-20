@@ -19,9 +19,10 @@ package org.keycloak.models.workflow;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.List;
+import java.util.stream.Stream;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.TypedQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.CriteriaDelete;
 import jakarta.persistence.criteria.CriteriaQuery;
@@ -84,7 +85,7 @@ public class JpaWorkflowStateProvider implements WorkflowStateProvider {
     }
 
     @Override
-    public List<ScheduledStep> getDueScheduledSteps(Workflow workflow) {
+    public Stream<ScheduledStep> getDueScheduledSteps(Workflow workflow) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<WorkflowStateEntity> query = cb.createQuery(WorkflowStateEntity.class);
         Root<WorkflowStateEntity> stateRoot = query.from(WorkflowStateEntity.class);
@@ -95,14 +96,13 @@ public class JpaWorkflowStateProvider implements WorkflowStateProvider {
         query.where(cb.and(byWorkflow, isExpired));
 
         return em.createQuery(query).getResultStream()
-                .map(this::toScheduledStep)
-                .toList();
+                .map(this::toScheduledStep);
     }
 
     @Override
-    public List<ScheduledStep> getScheduledStepsByWorkflow(String workflowId) {
+    public Stream<ScheduledStep> getScheduledStepsByWorkflow(String workflowId) {
         if (StringUtil.isBlank(workflowId)) {
-            return List.of();
+            return Stream.empty();
         }
 
         CriteriaBuilder cb = em.getCriteriaBuilder();
@@ -113,12 +113,11 @@ public class JpaWorkflowStateProvider implements WorkflowStateProvider {
         query.where(byWorkflow);
 
         return em.createQuery(query).getResultStream()
-                .map(this::toScheduledStep)
-                .toList();
+                .map(this::toScheduledStep);
     }
 
     @Override
-    public List<ScheduledStep> getScheduledStepsByResource(String resourceId) {
+    public Stream<ScheduledStep> getScheduledStepsByResource(String resourceId) {
         CriteriaBuilder cb = em.getCriteriaBuilder();
         CriteriaQuery<WorkflowStateEntity> query = cb.createQuery(WorkflowStateEntity.class);
         Root<WorkflowStateEntity> stateRoot = query.from(WorkflowStateEntity.class);
@@ -127,8 +126,7 @@ public class JpaWorkflowStateProvider implements WorkflowStateProvider {
         query.where(byResource);
 
         return em.createQuery(query).getResultStream()
-                .map(this::toScheduledStep)
-                .toList();
+                .map(this::toScheduledStep);
     }
 
     @Override
@@ -200,10 +198,27 @@ public class JpaWorkflowStateProvider implements WorkflowStateProvider {
     }
 
     @Override
+    public boolean hasScheduledSteps(String workflowId) {
+        CriteriaBuilder cb = em.getCriteriaBuilder();
+        CriteriaQuery<Long> criteriaQuery = cb.createQuery(Long.class);
+        Root<WorkflowStateEntity> stateRoot = criteriaQuery.from(WorkflowStateEntity.class);
+
+        criteriaQuery.select(cb.count(stateRoot));
+        criteriaQuery.where(cb.equal(stateRoot.get("workflowId"), workflowId));
+
+        TypedQuery<Long> query = em.createQuery(criteriaQuery);
+        query.setMaxResults(1);
+
+        Long count = query.getSingleResult();
+        return count > 0;
+    }
+
+    @Override
     public void close() {
     }
 
     private ScheduledStep toScheduledStep(WorkflowStateEntity entity) {
-        return new ScheduledStep(entity.getWorkflowId(), entity.getScheduledStepId(), entity.getResourceId(), entity.getExecutionId());
+        return new ScheduledStep(entity.getWorkflowId(), entity.getScheduledStepId(), entity.getResourceId(),
+                entity.getExecutionId(), entity.getScheduledStepTimestamp());
     }
 }

@@ -267,7 +267,7 @@ public class LoggingDistTest {
     }
 
     @Test
-    @Launch({ "start-dev", "--features=log-mdc","--log-mdc-enabled=true", "--log-level=org.keycloak.transaction:debug" })
+    @Launch({ "start-dev", "--log-mdc-enabled=true", "--log-level=org.keycloak.transaction:debug" })
     void testLogMdcShowingInTheLogs(CLIResult cliResult) {
 
         when().get("http://127.0.0.1:8080/realms/master/.well-known/openid-configuration").then()
@@ -302,5 +302,15 @@ public class LoggingDistTest {
         when().get("http://127.0.0.1:8080/realms/master/clients/account/redirect").then()
                 .statusCode(200);
         cliResult.assertNoMessage("http://127.0.0.1:8080/realms/master/clients/account/redirect");
+    }
+
+    // Telemetry Logs
+    @Test
+    @Launch({"start-dev", "--feature-opentelemetry-logs=enabled", "--telemetry-logs-enabled=true", "--log-level=io.opentelemetry:fine"})
+    void telemetryLogsEnabled(CLIResult cliResult) {
+        cliResult.assertStartedDevMode();
+        cliResult.assertMessage("opentelemetry");
+        cliResult.assertMessage("service.name=\"keycloak\"");
+        cliResult.assertMessage("Failed to export LogsRequestMarshaler.");
     }
 }

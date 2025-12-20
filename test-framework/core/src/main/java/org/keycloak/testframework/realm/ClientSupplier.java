@@ -9,6 +9,8 @@ import jakarta.ws.rs.core.Response.Status;
 import org.keycloak.admin.client.resource.ClientResource;
 import org.keycloak.representations.idm.ClientRepresentation;
 import org.keycloak.testframework.annotations.InjectClient;
+import org.keycloak.testframework.injection.DependenciesBuilder;
+import org.keycloak.testframework.injection.Dependency;
 import org.keycloak.testframework.injection.InstanceContext;
 import org.keycloak.testframework.injection.RequestedInstance;
 import org.keycloak.testframework.injection.Supplier;
@@ -16,6 +18,11 @@ import org.keycloak.testframework.injection.SupplierHelpers;
 import org.keycloak.testframework.util.ApiUtil;
 
 public class ClientSupplier implements Supplier<ManagedClient, InjectClient> {
+
+    @Override
+    public List<Dependency> getDependencies(RequestedInstance<ManagedClient, InjectClient> instanceContext) {
+        return DependenciesBuilder.create(ManagedRealm.class, instanceContext.getAnnotation().realmRef()).build();
+    }
 
     @Override
     public ManagedClient getValue(InstanceContext<ManagedClient, InjectClient> instanceContext) {
@@ -38,7 +45,7 @@ public class ClientSupplier implements Supplier<ManagedClient, InjectClient> {
             if (Status.CONFLICT.equals(Status.fromStatusCode(response.getStatus()))) {
                 throw new IllegalStateException("Client already exist with client id: " + clientRepresentation.getClientId());
             }
-            clientRepresentation.setId(ApiUtil.handleCreatedResponse(response));
+            clientRepresentation.setId(ApiUtil.getCreatedId(response));
         } else {
             List<ClientRepresentation> clients = realm.admin().clients().findByClientId(attachTo);
             if (clients.isEmpty()) {

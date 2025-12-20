@@ -150,7 +150,7 @@ public class UserResourceTypeEvaluationTest extends AbstractPermissionTest {
         createAllPermission(client, usersType, policy, Set.of(VIEW, MANAGE));
 
         // creating user requires manage scope
-        String newUserId = ApiUtil.handleCreatedResponse(realmAdminClient.realm(realm.getName()).users().create(UserConfigBuilder.create().username(newUserUsername).build()));
+        String newUserId = ApiUtil.getCreatedId(realmAdminClient.realm(realm.getName()).users().create(UserConfigBuilder.create().username(newUserUsername).build()));
 
         // it should be possible to update the user due to fallback to all-users permission
         realmAdminClient.realm(realm.getName()).users().get(newUserId).update(UserConfigBuilder.create().email("new@test.com").build());
@@ -164,7 +164,7 @@ public class UserResourceTypeEvaluationTest extends AbstractPermissionTest {
         ScopePermissionRepresentation allUsersPermission = createAllPermission(client, usersType, policy, Set.of(VIEW, MANAGE));
 
         // creating user requires manage scope
-        String newUserId = ApiUtil.handleCreatedResponse(realmAdminClient.realm(realm.getName()).users().create(UserConfigBuilder.create().username(newUserUsername).build()));
+        String newUserId = ApiUtil.getCreatedId(realmAdminClient.realm(realm.getName()).users().create(UserConfigBuilder.create().username(newUserUsername).build()));
 
         // remove all-users permissions to test user-permission
         allUsersPermission = getScopePermissionsResource(client).findByName(allUsersPermission.getName());
@@ -490,18 +490,18 @@ public class UserResourceTypeEvaluationTest extends AbstractPermissionTest {
         // Create group 'test_admins'
         GroupRepresentation testAdminsGroup = new GroupRepresentation();
         testAdminsGroup.setName("test_admins");
-        testAdminsGroup.setId(ApiUtil.handleCreatedResponse(realm.admin().groups().add(testAdminsGroup)));
+        testAdminsGroup.setId(ApiUtil.getCreatedId(realm.admin().groups().add(testAdminsGroup)));
 
         // Add user 'myadmin' as a member of 'test_admins'
         UserRepresentation myadmin = realm.admin().users().search("myadmin").get(0);
         realm.admin().users().get(myadmin.getId()).joinGroup(testAdminsGroup.getId());
 
         // Create user permission allowing to 'view' all users by members of 'test_admins' group
-        GroupPolicyRepresentation allowAdmins = createGroupPolicy(realm, client, "Allow 'test_admins'", testAdminsGroup.getId(), Logic.POSITIVE);
+        GroupPolicyRepresentation allowAdmins = createGroupPolicy(realm, client, "Allow 'test_admins'", Logic.POSITIVE, testAdminsGroup.getId());
         createAllPermission(client, usersType, allowAdmins, Set.of(VIEW));
 
         // Create group permission denying to 'manage' specific group: 'test_admins' by members of 'test_admins'
-        GroupPolicyRepresentation denyAdmins = createGroupPolicy(realm, client, "Deny Policy", testAdminsGroup.getId(), Logic.NEGATIVE);
+        GroupPolicyRepresentation denyAdmins = createGroupPolicy(realm, client, "Deny Policy", Logic.NEGATIVE, testAdminsGroup.getId());
         createGroupPermission(testAdminsGroup, Set.of(MANAGE), denyAdmins);
 
         UserRepresentation representation = realmAdminClient.realm(realm.getName()).users().get(myadmin.getId()).toRepresentation();

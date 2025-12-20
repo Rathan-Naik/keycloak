@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import jakarta.ws.rs.core.Response;
@@ -55,6 +56,20 @@ public class JWTClientSecretAuthenticator extends AbstractClientAuthenticator {
     @Override
     public void authenticateClient(ClientAuthenticationFlowContext context) {
         try {
+            ClientAssertionState clientAssertionState = context.getState(ClientAssertionState.class, ClientAssertionState.supplier());
+            JsonWebToken jwt = clientAssertionState.getToken();
+
+            if (jwt != null) {
+                // Ignore for client assertions signed by third-parties
+                if (!Objects.equals(jwt.getIssuer(), jwt.getSubject())) {
+                    return;
+                }
+
+                if (clientAssertionState.getClient() == null) {
+                    clientAssertionState.setClient(context.getRealm().getClientByClientId(jwt.getSubject()));
+                }
+            }
+
             JWTClientValidator validator = new JWTClientValidator(context, this::verifySignature, getId());
             if (!validator.validate()) return;
 

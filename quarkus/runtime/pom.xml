@@ -125,6 +125,10 @@
             <groupId>io.opentelemetry.instrumentation</groupId>
             <artifactId>opentelemetry-apache-httpclient-4.3</artifactId>
         </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-micrometer-opentelemetry</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>com.apicatalog</groupId>
@@ -145,6 +149,12 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-validator</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.glassfish.expressly</groupId>
+                    <artifactId>expressly</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- SmallRye -->
@@ -436,10 +446,6 @@
         </dependency>
 
         <!-- Keycloak Dependencies-->
-        <dependency>
-            <groupId>io.fabric8</groupId>
-            <artifactId>zjsonpatch</artifactId>
-        </dependency>
         <dependency>
             <groupId>org.jboss.logging</groupId>
             <artifactId>commons-logging-jboss-logging</artifactId>
