@@ -27,7 +27,7 @@
                 </div>
             </#if>
 
-            <@field.input name="otp" label=msg("loginOtpOneTime") autocomplete="one-time-code" fieldName="totp" autofocus=true />
+            <@field.input name="otp" label=msg("loginOtpOneTime") autocomplete="one-time-code" fieldName="totp" autofocus=true required=true />
 
             <@buttons.loginButton />
         </form>

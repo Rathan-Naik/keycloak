@@ -7,7 +7,7 @@
         ${msg("auth-recovery-code-header")}
     <#elseif section = "form">
         <form id="kc-recovery-code-login-form" class="${properties.kcFormClass!}" onsubmit="login.disabled = true; return true;" action="${url.loginAction}" method="post">
-            <@field.input name="recoveryCodeInput" label=msg("auth-recovery-code-prompt", recoveryAuthnCodesInputBean.codeNumber?c) autofocus=true />
+            <@field.input name="recoveryCodeInput" label=msg("auth-recovery-code-prompt", recoveryAuthnCodesInputBean.codeNumber?c) autofocus=true required=true />
 
             <@buttons.loginButton />
         </form>
